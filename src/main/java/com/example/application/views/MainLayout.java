@@ -57,41 +57,62 @@ public class MainLayout extends AppLayout {
         }
     }
     
-    private Footer createAuthFooter() {
-        Footer footer = new Footer();
+private Footer createAuthFooter() {
+    Footer footer = new Footer();
 
-        var authentication = SecurityContextHolder.getContext().getAuthentication();
+    var authentication = SecurityContextHolder.getContext().getAuthentication();
 
-        if (authentication != null &&
-            authentication.isAuthenticated() &&
-            !(authentication instanceof AnonymousAuthenticationToken)) {
+    if (authentication != null &&
+        authentication.isAuthenticated() &&
+        !(authentication instanceof AnonymousAuthenticationToken)) {
 
-            String username;
-            if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
-                OAuth2User user = oauthToken.getPrincipal();
-                username = (String) user.getAttributes().get("email");
-            } else {
-                username = authentication.getName();
-            }
-
-            Span userName = new Span("Usuario: " + username);
-            userName.getStyle().set("margin-right", "1rem");
-
-            Button logout = new Button("Cerrar sesión", e -> {
-                Notification.show("Cerrando sesión...", 3000, Notification.Position.MIDDLE);
-                UI.getCurrent().getPage().setLocation("/logout");
-            });
-
-            footer.add(userName, logout);
+        String username;
+        if (authentication instanceof OAuth2AuthenticationToken oauthToken) {
+            OAuth2User user = oauthToken.getPrincipal();
+            username = (String) user.getAttributes().get("email");
         } else {
-            Button login = new Button("Login", e -> {
-                UI.getCurrent().getPage().setLocation("/oauth2/authorization/okta");
-            });
-            footer.add(login);
+            username = authentication.getName();
         }
 
-        return footer;
+        // Obtener rol principal
+        String mainRole = getMainRole();
+
+        // Mostrar correo y rol
+        Span userEmail = new Span("Correo: " + username);
+        Span userRole = new Span("Rol: " + mainRole);
+
+        userEmail.getStyle().set("display", "block").set("margin-bottom", "0.2rem");
+        userRole.getStyle().set("display", "block").set("margin-bottom", "0.5rem");
+
+        // Botón de logout
+        Button logout = new Button("Cerrar sesión", e -> {
+            Notification.show("Cerrando sesión...", 3000, Notification.Position.MIDDLE);
+            UI.getCurrent().getPage().setLocation("/logout");
+        });
+
+        footer.add(userEmail, userRole, logout);
+    } else {
+        Button login = new Button("Login", e -> {
+            UI.getCurrent().getPage().setLocation("/oauth2/authorization/okta");
+        });
+        footer.add(login);
     }
+
+    return footer;
+}
+
+private String getMainRole() {
+    if (hasAuthority("ROLE_ADMIN")) {
+        return "ADMIN";
+    } else if (hasAuthority("ROLE_PROFESOR")) {
+        return "PROFESOR";
+    } else if (hasAuthority("ROLE_ESTUDIANTE")) {
+        return "ESTUDIANTE";
+    } else {
+        return "Desconocido";
+    }
+}
+
 
 
     /**
